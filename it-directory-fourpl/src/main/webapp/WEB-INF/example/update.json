@@ -1,0 +1,13 @@
+{
+  "app":"",
+  "enum":"update",
+  "doc": {
+	"id": 25,
+	"measureCodeRu": "testMeasure5",
+	"measureCodeEn": "testMeasure6",
+	"measureFullNameRu": "testMeasure1",
+	"measureFullNameEn": "testMeasure2",
+	"measureNameRu": "testMeasure3", 
+	"measureNameEn": "testMeasure4"
+  }
+}

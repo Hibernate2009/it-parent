@@ -1,0 +1,10 @@
+{
+  "app":"",
+  "system":"customs",
+  "enum":"update",
+  "doc": {
+	"id": 1,
+	"nameRU": "nameRU2",
+	"nameEN": "nameRU2"
+  }
+}

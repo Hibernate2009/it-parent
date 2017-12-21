@@ -1,0 +1,11 @@
+{
+  "app":"",
+  "system":"customs",
+  "enum":"add",
+  "doc": {
+  	"id": 1,
+	"nameRU": "nameRU",
+	"nameEN": "nameEN",
+	"isUsed": true
+  }
+}

@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans classpath:org/springframework/beans/factory/xml/spring-beans-3.2.xsd
+			http://www.springframework.org/schema/context classpath:org/springframework/context/config/spring-context-3.2.xsd">
+
+
+	<context:property-placeholder location="file:./etc/it.base.config.cfg" />
+	
+	<bean id="propertiesService" class="org.prof_itgroup.it_directory_customs.PropertiesServiceImpl" />
+	
+	<bean id="jndiTemplate" class="org.springframework.jndi.JndiTemplate" />
+	
+	<bean id="jmsConnectionFactory" class="org.springframework.jndi.JndiObjectFactoryBean">
+		<property name="jndiTemplate" ref="jndiTemplate" />
+		<property name="jndiName" value="#{propertiesService.get('connectionfactory')}" />
+		<property name="cache" value="true" />
+		<property name="proxyInterface" value="javax.jms.ConnectionFactory" />
+	</bean>
+	
+	<bean id="dataSource" class="org.springframework.jndi.JndiObjectFactoryBean">
+		<property name="jndiTemplate" ref="jndiTemplate" />
+		<property name="jndiName" value="#{propertiesService.get('datasource')}" />
+		<property name="cache" value="true" />
+		<property name="proxyInterface" value="javax.sql.DataSource" />
+	</bean>
+	<bean id="pgDataSource" class="org.springframework.jndi.JndiObjectFactoryBean">
+		<property name="jndiTemplate" ref="jndiTemplate" />
+		<property name="jndiName" value="#{propertiesService.get('sysdatasource')}" />
+		<property name="cache" value="true" />
+		<property name="proxyInterface" value="javax.sql.DataSource" />
+	</bean>
+	
+	 <bean id="jdbcTemplateBean" class="org.springframework.jdbc.core.JdbcTemplate" lazy-init="false">
+        <constructor-arg>
+            <ref bean="dataSource" />
+        </constructor-arg>
+    </bean>
+    <bean id="pgJdbcTemplateBean" class="org.springframework.jdbc.core.JdbcTemplate" lazy-init="false">
+        <constructor-arg>
+            <ref bean="pgDataSource" />
+        </constructor-arg>
+    </bean>
+    
+    
+    <bean id="jmsDestinationResolver" class="org.springframework.jms.support.destination.DynamicDestinationResolver"/>
+	
+	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+		<property name="connectionFactory">
+			<ref bean="jmsConnectionFactory" />
+		</property>
+		<property name="destinationResolver">
+			<ref bean="jmsDestinationResolver" />
+		</property>
+	</bean>
+	
+	<bean id="jmsSender" class="org.it.utils.jms.JmsTemplateSenderImpl">
+		<constructor-arg index="0" ref="jmsTemplate" />
+	</bean>
+    
+    <bean id="delivery" class="org.it.utils.sgd.Delivery" destroy-method="stop">
+		<constructor-arg index="0" ref="propertiesService" />
+		<constructor-arg index="1" ref="pgJdbcTemplateBean" />
+		<constructor-arg index="2" ref="jmsSender" />
+		<constructor-arg index="3" value="DEL_DELIVERY" />
+		<constructor-arg index="4" value="CUSTOMS_DIRECTORY" />
+	</bean>
+	
+	<bean id="addActionService" class="org.prof_itgroup.it_directory_customs.invoke.AddActionService">
+		<constructor-arg index="0" ref="jdbcTemplateBean" />
+	</bean>
+	<bean id="updateActionService" class="org.prof_itgroup.it_directory_customs.invoke.UpdateActionService">
+		<constructor-arg index="0" ref="jdbcTemplateBean" />
+	</bean>
+	<bean id="deleteActionService" class="org.prof_itgroup.it_directory_customs.invoke.DeleteActionService">
+		<constructor-arg index="0" ref="jdbcTemplateBean" />
+	</bean>
+	
+	<bean id="addDeliveryInvoke" class="org.prof_itgroup.it_directory_customs.invoke.SgdDeliveryInvoke">
+		<constructor-arg ref="propertiesService" />
+		<constructor-arg ref="jmsSender" />
+	</bean>
+	<bean id="updateDeliveryInvoke" class="org.prof_itgroup.it_directory_customs.invoke.SgdDeliveryInvoke">
+		<constructor-arg ref="propertiesService" />
+		<constructor-arg ref="jmsSender" />
+	</bean>
+	<bean id="deleteDeliveryInvoke" class="org.prof_itgroup.it_directory_customs.invoke.SgdDeliveryInvoke">
+		<constructor-arg ref="propertiesService" />
+		<constructor-arg ref="jmsSender" />
+	</bean>
+
+	<bean id="addDeliverySgd" class="org.it.utils.sgd.SGD">
+		<constructor-arg index="0" value="queue_customs_directory_add_sgd" />
+		<constructor-arg index="1" ref="addActionService" />
+		<constructor-arg index="2" ref="delivery" />
+		<constructor-arg index="3" ref="addDeliveryInvoke" />
+	</bean>
+	<bean id="updateDeliverySgd" class="org.it.utils.sgd.SGD">
+		<constructor-arg index="0" value="queue_customs_directory_update_sgd" />
+		<constructor-arg index="1" ref="updateActionService" />
+		<constructor-arg index="2" ref="delivery" />
+		<constructor-arg index="3" ref="updateDeliveryInvoke" />
+	</bean>
+	<bean id="deleteDeliverySgd" class="org.it.utils.sgd.SGD">
+		<constructor-arg index="0" value="queue_customs_directory_delete_sgd" />
+		<constructor-arg index="1" ref="deleteActionService" />
+		<constructor-arg index="2" ref="delivery" />
+		<constructor-arg index="3" ref="deleteDeliveryInvoke" />
+	</bean>
+	
+	<bean id="addMessageListener" class="org.prof_itgroup.it_directory_customs.SgdMessageListener">
+		<constructor-arg index="0" ref="propertiesService" />
+		<constructor-arg index="1" ref="addDeliverySgd" />
+	</bean>
+	<bean id="deleteMessageListener" class="org.prof_itgroup.it_directory_customs.SgdMessageListener">
+		<constructor-arg index="0" ref="propertiesService" />
+		<constructor-arg index="1" ref="deleteDeliverySgd" />
+	</bean>
+	<bean id="updateMessageListener" class="org.prof_itgroup.it_directory_customs.SgdMessageListener">
+		<constructor-arg index="0" ref="propertiesService" />
+		<constructor-arg index="1" ref="updateDeliverySgd" />
+	</bean>
+	
+	<bean id="addSgdContainer" destroy-method="destroy" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="jmsConnectionFactory" />
+		<property name="destinationName" value="queue_customs_directory_add_sgd" />
+		<property name="concurrentConsumers" value="1"/>
+		<property name="messageListener" ref="addDeliverySgd" />
+	</bean>
+	<bean id="updateSgdContainer" destroy-method="destroy" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="jmsConnectionFactory" />
+		<property name="destinationName" value="queue_customs_directory_update_sgd" />
+		<property name="concurrentConsumers" value="1"/>
+		<property name="messageListener" ref="updateDeliverySgd" />
+	</bean>
+	<bean id="deleteSgdContainer" destroy-method="destroy" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="jmsConnectionFactory" />
+		<property name="destinationName" value="queue_customs_directory_delete_sgd" />
+		<property name="concurrentConsumers" value="1"/>
+		<property name="messageListener" ref="deleteDeliverySgd" />
+	</bean>
+	
+	<bean id="addContainer" destroy-method="destroy" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="jmsConnectionFactory" />
+		<property name="concurrentConsumers" value="1" />
+		<property name="destinationName" value="add-topic" />
+		<property name="pubSubDomain" value="true"/>
+		<property name="messageListener" ref="addMessageListener" />
+	</bean>
+	<bean id="deleteContainer" destroy-method="destroy" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="jmsConnectionFactory" />
+		<property name="concurrentConsumers" value="1" />
+		<property name="destinationName" value="delete-topic" />
+		<property name="pubSubDomain" value="true"/>
+		<property name="messageListener" ref="deleteMessageListener" />
+	</bean>
+	<bean id="updateContainer" destroy-method="destroy" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="jmsConnectionFactory" />
+		<property name="concurrentConsumers" value="1" />
+		<property name="destinationName" value="update-topic" />
+		<property name="pubSubDomain" value="true"/>
+		<property name="messageListener" ref="updateMessageListener" />
+	</bean>
+
+</beans>
